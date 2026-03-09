@@ -1,0 +1,12 @@
+.env
+.idea
+.env/
+__pycache__/
+
+*.pyc
+.idea/
+*.pyo
+
+.pytest_cache/
+
+.tox/
