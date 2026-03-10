@@ -3,8 +3,8 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 import json
 import asyncio
 
-from config import settings
-from client_service import client
+from backend.config import settings
+from backend.client_service.client_service import client
 
 router = APIRouter(prefix="")
 

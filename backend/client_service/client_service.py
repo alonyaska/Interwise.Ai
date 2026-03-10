@@ -1,4 +1,4 @@
-from config import settings
+from backend.config import settings
 from google import genai
 
 API_KEY = settings.GEMINI_API_KEY

@@ -27,3 +27,24 @@ class InterwiseConectionSock(InterwiseExceptions):
 class InterwiseWebSocket(InterwiseExceptions):
     status_code = 409
     detail = "WebSocket is  out  XD funny "
+
+class UserNotLogin(InterwiseExceptions):
+    status_code = 401
+    detail = "login for use site"
+
+
+class TokenAbsentException(InterwiseExceptions):
+    status_code =  401
+    detail = "token is not correct"
+
+class TokenIsExpireException(InterwiseExceptions):
+    status_code = 401
+    detail = "token is not correct"
+
+class IncorrectTokenType(InterwiseExceptions):
+    status_code =  401
+    detail = "token is not correct"
+
+class UserAlreedyHasInSite(InterwiseExceptions):
+    status_code =  401
+    detail = "user is already register"

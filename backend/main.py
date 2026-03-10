@@ -6,12 +6,14 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from router import router as repai
+from api.router import router as repai
+from Users.router import router as auth_router
 load_dotenv()
 
 app = FastAPI()
 
 app.include_router(repai)
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,
