@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add parent directory to path for imports
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
 
-from api.router import router as repai
-from Users.router import router as auth_router
+from backend.api.router import router as repai
+from backend.Users.router import router as auth_router
 load_dotenv()
 
 app = FastAPI()
@@ -22,4 +24,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-

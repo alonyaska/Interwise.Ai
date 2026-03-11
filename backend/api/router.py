@@ -2,9 +2,15 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 import json
 import asyncio
+import sys
+import os
 
-from backend.config import settings
-from backend.client_service.client_service import client
+# Add parent directory to path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, backend_dir)
+
+from config import settings
+from client_service.client_service import client
 
 router = APIRouter(prefix="")
 
