@@ -179,6 +179,8 @@ function Auth({ onLogin }) {
             if (!res.ok) {
                 throw new Error(data.detail || 'Ошибка регистрации')
             }
+            // Ждём 2 секунды чтобы данные сохранились в БД
+            await new Promise(r => setTimeout(r, 2000))
             setActiveTab('login')
             setError('')
         } catch (err) {
@@ -195,6 +197,8 @@ function Auth({ onLogin }) {
                 if (!res.ok) {
                     throw new Error(data.detail || 'Ошибка регистрации')
                 }
+                // Ждём 2 секунды чтобы данные сохранились в БД
+                await new Promise(r => setTimeout(r, 2000))
                 setActiveTab('login')
                 setError('')
             } catch (err2) {
@@ -367,13 +371,122 @@ function Auth({ onLogin }) {
     )
 }
 
-function MainApp() {
+function MyLove() {
+    const [loveData, setLoveData] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const canvasRef = useRef(null)
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        
+        const ctx = canvas.getContext('2d')
+        let hearts = []
+        let W = window.innerWidth
+        let H = window.innerHeight
+        
+        const resize = () => {
+            W = canvas.width = window.innerWidth
+            H = canvas.height = window.innerHeight
+        }
+        
+        const initHearts = () => {
+            hearts = Array.from({ length: 30 }, () => ({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                size: Math.random() * 15 + 8,
+                speedY: Math.random() * 1 + 0.5,
+                speedX: (Math.random() - 0.5) * 0.5,
+                alpha: Math.random() * 0.5 + 0.3,
+                pulse: Math.random() * Math.PI * 2
+            }))
+        }
+        
+        const drawHeart = (x, y, size, alpha, pulse) => {
+            const s = size + Math.sin(pulse) * 3
+            ctx.save()
+            ctx.globalAlpha = alpha
+            ctx.fillStyle = '#ff6b9d'
+            ctx.beginPath()
+            ctx.moveTo(x, y + s / 4)
+            ctx.bezierCurveTo(x, y, x - s / 2, y, x - s / 2, y + s / 4)
+            ctx.bezierCurveTo(x - s / 2, y + s / 2, x, y + s * 0.7, x, y + s)
+            ctx.bezierCurveTo(x, y + s * 0.7, x + s / 2, y + s / 2, x + s / 2, y + s / 4)
+            ctx.bezierCurveTo(x + s / 2, y, x, y, x, y + s / 4)
+            ctx.fill()
+            ctx.restore()
+        }
+        
+        const tick = () => {
+            ctx.clearRect(0, 0, W, H)
+            for (const h of hearts) {
+                h.pulse += 0.03
+                h.y -= h.speedY
+                h.x += h.speedX
+                
+                if (h.y < -50) {
+                    h.y = H + 50
+                    h.x = Math.random() * W
+                }
+                
+                drawHeart(h.x, h.y, h.size, h.alpha, h.pulse)
+            }
+            requestAnimationFrame(tick)
+        }
+        
+        window.addEventListener('resize', () => { resize(); initHearts() })
+        resize()
+        initHearts()
+        tick()
+        
+        fetch(`${API_URL}/auth/mylove`, { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => setLoveData(data))
+            .finally(() => setLoading(false))
+    }, [])
+
+    return (
+        <>
+            <canvas ref={canvasRef} className="star-canvas"></canvas>
+            <div className="love-container">
+                {loading ? (
+                    <div className="love-loading">
+                        <div className="love-spinner"></div>
+                        <p>Загрузка любви...</p>
+                    </div>
+                ) : (
+                    <div className="love-card">
+                        <div className="love-icon">💕</div>
+                        <h1 className="love-title">Моя Любовь</h1>
+                        <div className="love-heart">
+                            <svg viewBox="0 0 24 24" fill="#ff6b9d">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </div>
+                        <p className="love-message">{loveData?.['ur Love']}</p>
+                        <div className="love-decoration">
+                            <span className="star">✨</span>
+                            <span className="star">💖</span>
+                            <span className="star">✨</span>
+                        </div>
+                        <p className="love-subtitle">Навсегда в моём сердце</p>
+                    </div>
+                )}
+            </div>
+        </>
+    )
+}
+
+function MainApp({ onNavigate }) {
     const [isRecording, setIsRecording] = useState(false)
     const [transcript, setTranscript] = useState('')
     const [answer, setAnswer] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [history, setHistory] = useState([])
     const [wsConnected, setWsConnected] = useState(false)
+    const [profileOpen, setProfileOpen] = useState(false)
+    const [profileEmail, setProfileEmail] = useState('')
+    const [profileId, setProfileId] = useState(null)
     
     const recognitionRef = useRef(null)
     const wsRef = useRef(null)
@@ -472,6 +585,26 @@ function MainApp() {
         }
     }
 
+    const fetchWithRetry = async (url, opts, retries = 3, delay = 1000) => {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const res = await fetch(url, opts)
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}))
+                    throw new Error(data.detail || res.statusText || 'Network error')
+                }
+                return res
+            } catch (e) {
+                if (i < retries - 1) {
+                    await new Promise(r => setTimeout(r, delay))
+                    delay *= 2
+                } else {
+                    throw e
+                }
+            }
+        }
+    }
+
     const initSpeechRecognition = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
         
@@ -515,6 +648,38 @@ function MainApp() {
             if (isRecording) {
                 setIsRecording(false)
             }
+        }
+    }
+
+    const openProfile = async () => {
+        setProfileOpen(true)
+        try {
+            const res = await fetchWithRetry(`${API_URL}/auth/me`, { credentials: 'include' })
+            if (res.ok) {
+                const data = await res.json()
+                setProfileEmail(data.email || '')
+                if (data.id !== undefined) setProfileId(data.id)
+            }
+        } catch { /* ignore */ }
+    }
+
+    const saveProfile = async () => {
+        try {
+            const res = await fetchWithRetry(`${API_URL}/auth/me`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: profileId, email: profileEmail }),
+                credentials: 'include'
+            })
+            if (res.ok) {
+                setProfileOpen(false)
+                await new Promise(r => setTimeout(r, 400))
+            } else {
+                const d = await res.json().catch(() => ({}))
+                console.error(d.detail || 'Update failed')
+            }
+        } catch (e) {
+            console.error(e)
         }
     }
 
@@ -586,8 +751,12 @@ function MainApp() {
                             </svg>
                         </div>
                         <h1>INTERWISE.AI</h1>
+                        <button className="profile-btn" onClick={openProfile} title="Профиль" aria-label="Профиль">Профиль</button>
                     </div>
                     <div className="header-right">
+                        <button className="love-nav-btn" onClick={() => onNavigate('love')}>
+                            💕
+                        </button>
                         <div className={`badge ${wsConnected ? '' : 'offline'}`}>
                             <div className="badge-dot"></div>
                             {wsConnected ? 'Онлайн' : 'Оффлайн'}
@@ -595,6 +764,20 @@ function MainApp() {
                         <button className="logout-btn" onClick={handleLogout}>Выйти</button>
                     </div>
                 </div>
+
+                {profileOpen && (
+                    <div className="profile-overlay" onClick={() => setProfileOpen(false)}>
+                        <div className="profile-panel" onClick={e => e.stopPropagation()}>
+                            <div className="profile-title">Профиль</div>
+                            <label>Email</label>
+                            <input type="email" value={profileEmail} onChange={e => setProfileEmail(e.target.value)} />
+                            <div className="profile-actions" style={{ display:'flex', gap:8, marginTop:10 }}>
+                                <button className="btn-submit" onClick={saveProfile}>Сохранить</button>
+                                <button className="btn-oauth" onClick={() => setProfileOpen(false)}>Отмена</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="divider"></div>
 
@@ -676,6 +859,7 @@ function MainApp() {
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [currentPage, setCurrentPage] = useState('main')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -716,7 +900,15 @@ function App() {
         )
     }
 
-    return isAuthenticated ? <MainApp /> : <Auth onLogin={() => setIsAuthenticated(true)} />
+    if (!isAuthenticated) {
+        return <Auth onLogin={() => setIsAuthenticated(true)} />
+    }
+
+    if (currentPage === 'love') {
+        return <MyLove />
+    }
+
+    return <MainApp onNavigate={(page) => setCurrentPage(page)} />
 }
 
 export default App

@@ -1,8 +1,8 @@
 from backend.Users.auth import get_password_hash, authenticate_user, create_access_token
 from backend.Users.dao import UsersDao
-from backend.Users.schemas import SRegister, SLogin
+from backend.Users.schemas import SRegister, SLogin, SupdUser
 
-from backend.exceptions import UserAlreedyHasInSite, UserNotLogin
+from backend.exceptions import UserAlreedyHasInSite, UserNotLogin, NotUpdate, UserIsNotFound
 from fastapi import  Response
 
 class UserService:
@@ -36,3 +36,19 @@ class UserService:
     @classmethod
     async  def logout_user(cls, response:Response):
         response.delete_cookie("user_url_token")
+
+
+    @classmethod
+    async  def upd_me(cls, user_data:SupdUser):
+        user = await  UsersDao.get_one_or_none(id=user_data.id)
+        if not user:
+            raise  UserIsNotFound
+
+        update_data = user_data.model_dump(exclude_unset=True)
+        if not update_data:
+            raise  NotUpdate
+
+        update_user = await  UsersDao.update_user(user_data.id, **update_data)
+        return  update_user
+
+

@@ -48,3 +48,13 @@ class IncorrectTokenType(InterwiseExceptions):
 class UserAlreedyHasInSite(InterwiseExceptions):
     status_code =  401
     detail = "user is already register"
+
+
+class NotUpdate(InterwiseExceptions):
+    status_code = 400
+    detail =  "not update data"
+
+
+class UserIsNotFound(InterwiseExceptions):
+    status_code = 404
+    detail =  "not found"
