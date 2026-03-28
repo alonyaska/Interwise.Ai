@@ -122,7 +122,6 @@ repai.ai/
 ## 📝 Автор
 
 **Роман** (@alonyaska)
-- Студент ВШЭ НИУ ВШЭ (Business Informatics)
 - Backend-разработчик
 - Создатель Skins-Marketplace, FastCut
 
